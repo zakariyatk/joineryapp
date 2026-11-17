@@ -9,7 +9,7 @@ Built with Electron, React and TypeScript.
 | Screen | |
 | --- | --- |
 | **Projects** | All jobs with status (Drafting → Quoted → In production → Installed), quote value, and a "continue" card showing where each job is. |
-| **Drawings** | Parametric units (base, wall, tall) from templates. Change width, height, depth, plinth, drawer, shelves or doors and the front elevation and side section redraw with dimensions. Export **DXF** for CAD/CNC or a **PDF** drawing sheet. |
+| **Drawings** | Parametric units (base, wall, tall) from templates. **Add units** creates several cabinets of one template at once, each with its own name, width, height, depth and quantity; typing a list of widths like `300, 450, 600` creates the rows for you. Change width, height, depth, plinth, drawer, shelves or doors and the front elevation and side section redraw with dimensions. Export **DXF** for CAD/CNC or a **PDF** drawing sheet. |
 | **Cutting list** | Every part with size, thickness, material and edge banding (L1 L2 W1 W2), generated from the drawings. Sheet layouts are optimised with guillotine cuts that can be made on a panel saw, honouring kerf, edge trim and grain. Export **CSV** or a **PDF** with layouts. |
 | **Estimate & quote** | Materials (from the sheet count), edge banding, hardware and labour hours are calculated automatically. Any quantity or rate can be overridden per project, and you can add extra lines. Overhead, margin and tax are applied, and a **quote PDF** is generated. |
 | **Materials & rates** | Board names, thickness, sheet size and price; hardware prices; labour rates; company name and currency. |
@@ -33,7 +33,15 @@ npm run dev
 | `npm test` | Unit tests for part generation, nesting, pricing and exports |
 | `npm run build` | Type-check and build the renderer into `dist/` |
 | `npm start` | Run Electron against the built `dist/` |
-| `npm run dist` | Build a Windows installer into `release/` |
+| `npm run dist` | Build the Windows installer, `release/JoineryApp-Setup-<version>.exe` |
+
+## Installing on Windows
+
+Run `npm run dist`, then copy `release/JoineryApp-Setup-<version>.exe` to the PC and run it.
+
+- The installer asks where to install and adds Start menu and desktop shortcuts. It installs for the current user, so no admin rights are needed.
+- Uninstall from **Settings → Apps**. Saved projects in `%APPDATA%\joineryapp` are kept, so reinstalling or upgrading doesn't lose work.
+- The installer is not code-signed, so Windows SmartScreen will warn "Windows protected your PC" the first time. Choose **More info → Run anyway**. Signing it needs a code-signing certificate.
 
 ## How the numbers are worked out
 

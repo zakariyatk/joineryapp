@@ -167,7 +167,19 @@ tbody tr:last-child td { border-bottom: 0; }
 dialog { border: 0; border-radius: 12px; padding: 0; width: min(440px, calc(100vw - 32px)); box-shadow: 0 20px 50px rgba(0,0,0,.25); }
 dialog::backdrop { background: rgba(23, 25, 29, .45); }
 dialog form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+dialog .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+dialog.wide { width: min(820px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tpl-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 8px; }
+.tpl { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 600; cursor: pointer; }
+.tpl:hover { border-color: var(--accent); }
+.tpl.on { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.quickfill { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.au-table { border: 1px solid var(--border); border-radius: 8px; max-height: 320px; overflow-y: auto; }
+.au-table td { padding: 6px 8px; vertical-align: top; }
+.au-table th { position: sticky; top: 0; z-index: 1; }
+.inp.invalid, .inp[aria-invalid="true"] { border-color: var(--danger); }
+.cell-err { font-size: 11px; color: var(--danger); margin-top: 2px; }
 
 /* Toast */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--side); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 10; }

@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { api } from '../api';
-import { IconCopy, IconDownload, IconTrash } from '../components/Icons';
+import { AddUnitsDialog } from '../components/AddUnitsDialog';
+import { IconCopy, IconDownload, IconPlus, IconTrash } from '../components/Icons';
 import { NumberField } from '../components/NumberField';
 import type { Screen } from '../components/Sidebar';
 import { useExport } from '../components/Toast';
 import { UnitDrawing } from '../components/UnitDrawing';
 import { doorCount, normalise, unitParts } from '../lib/cabinet';
-import { nextCode, TEMPLATES, uid, unitFromTemplate } from '../lib/defaults';
+import { nextCode, uid } from '../lib/defaults';
 import { buildGeometry, type View } from '../lib/drawing';
 import { drawingSheetHtml, geometryToDxf } from '../lib/exporters';
 import { slug } from '../lib/format';
@@ -30,10 +31,11 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
 
   const set = (patch: Partial<Unit>) => unit && updateUnit(project.id, unit.id, patch);
 
-  const addUnit = (i: number) => {
-    const u = unitFromTemplate(TEMPLATES[i], project.units);
-    updateProject(project.id, (p) => ({ ...p, units: [...p.units, u] }));
-    setUnitId(u.id);
+  const [adding, setAdding] = useState(false);
+  const addUnits = (units: Unit[]) => {
+    updateProject(project.id, (p) => ({ ...p, units: [...p.units, ...units] }));
+    setUnitId(units[0]?.id ?? null);
+    setAdding(false);
   };
   const duplicate = () => {
     if (!unit) return;
@@ -91,11 +93,7 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
               <span><span style={{ display: 'block', fontWeight: 600 }}>{u.name}{u.qty > 1 ? ` × ${u.qty}` : ''}</span><span className="s">{u.width} × {u.height} × {u.depth}</span></span>
             </button>
           ))}
-          <label className="lbl" htmlFor="add-unit" style={{ marginTop: 10, padding: '0 4px' }}>Add unit</label>
-          <select id="add-unit" className="inp" value="" onChange={(e) => e.target.value !== '' && addUnit(Number(e.target.value))}>
-            <option value="">Choose a template…</option>
-            {TEMPLATES.map((t, i) => <option key={t.label} value={i}>{t.label} ({t.width} × {t.height})</option>)}
-          </select>
+          <button type="button" className="btn2" style={{ marginTop: 10 }} onClick={() => setAdding(true)}><IconPlus />Add units</button>
           <div className="note" style={{ marginTop: 12 }}>Change any size on the right — the drawing, dimensions and part sizes update together.</div>
         </section>
 
@@ -112,7 +110,10 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
               </div>
             </>
           ) : (
-            <div className="canvas"><div className="empty">Add a unit from a template to start drawing.</div></div>
+            <div className="canvas"><div className="empty">
+              <p style={{ margin: '0 0 12px' }}>No units yet. Add one or several cabinets to start drawing.</p>
+              <button type="button" className="btn" onClick={() => setAdding(true)}><IconPlus />Add units</button>
+            </div></div>
           )}
         </section>
 
@@ -170,6 +171,7 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
           </section>
         )}
       </div>
+      <AddUnitsDialog open={adding} existing={project.units} onClose={() => setAdding(false)} onAdd={addUnits} />
     </>
   );
 }

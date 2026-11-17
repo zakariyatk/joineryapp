@@ -85,6 +85,62 @@ export function newProject(name: string, client: string): Project {
   };
 }
 
+/** One row of the "Add units" dialog: a unit of the chosen template with its own size. */
+export interface UnitRow {
+  name: string;
+  width: number;
+  height: number;
+  depth: number;
+  qty: number;
+}
+
+export const SIZE_LIMITS = {
+  width: { min: 150, max: 3000 },
+  height: { min: 150, max: 3000 },
+  depth: { min: 100, max: 1200 },
+  qty: { min: 1, max: 999 },
+} as const;
+
+/** Problems with a row, keyed by field; empty when the row is valid. */
+export function rowErrors(r: UnitRow): Partial<Record<keyof UnitRow, string>> {
+  const e: Partial<Record<keyof UnitRow, string>> = {};
+  if (!r.name.trim()) e.name = 'Name is required';
+  for (const k of ['width', 'height', 'depth', 'qty'] as const) {
+    const { min, max } = SIZE_LIMITS[k];
+    if (!Number.isFinite(r[k]) || r[k] < min || r[k] > max) e[k] = `${min}–${max}`;
+  }
+  return e;
+}
+
+/** Parse "300, 450 600;900" into widths. Returns null if any entry is not a number. */
+export function parseWidths(text: string): number[] | null {
+  const parts = text.split(/[\s,;]+/).filter(Boolean);
+  const nums = parts.map(Number);
+  return nums.every((n) => Number.isFinite(n) && n > 0) ? nums.map((n) => Math.round(n)) : null;
+}
+
+/**
+ * Create one unit per row from a template, each with its own size, giving
+ * each the next free code (B1, B2…) after the units already in the project.
+ */
+export function unitsFromRows(t: Template, rows: UnitRow[], existing: Unit[]): Unit[] {
+  const created: Unit[] = [];
+  for (const r of rows) {
+    const u = unitFromTemplate(t, [...existing, ...created]);
+    created.push({
+      ...u,
+      name: r.name.trim(),
+      width: r.width,
+      height: r.height,
+      depth: r.depth,
+      qty: Math.round(r.qty),
+      // Keep the template's drawer from swallowing a short carcass.
+      drawerHeight: Math.min(u.drawerHeight, Math.max(0, r.height - 100)),
+    });
+  }
+  return created;
+}
+
 /** First-run data: one sample kitchen so every screen has something to show. */
 export function sampleData(): AppData {
   const p = newProject('Kitchen – sample', 'Sample client');

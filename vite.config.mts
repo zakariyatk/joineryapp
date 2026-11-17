@@ -18,5 +18,11 @@ export default defineConfig({
   plugins: [react(), cspForBuild],
   base: './',
   server: { port: 5173, strictPort: true },
+  // Pre-bundle every React entry point up front. Otherwise the first visit can
+  // discover react-dom/server late, re-bundle mid-load and end up with two
+  // copies of React ("Invalid hook call", blank page).
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client', 'react-dom/server', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
+  },
   build: { outDir: 'dist', emptyOutDir: true },
 });

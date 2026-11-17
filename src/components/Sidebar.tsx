@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { useStore } from '../store';
-import { IconCalc, IconDrawing, IconList, IconProjects, IconSettings, Logo } from './Icons';
+import { IconBuild, IconCalc, IconDrawing, IconList, IconProjects, IconSettings, Logo } from './Icons';
 
-export type Screen = 'projects' | 'drawing' | 'cutting' | 'estimate' | 'settings';
+export type Screen = 'projects' | 'build' | 'drawing' | 'cutting' | 'estimate' | 'settings';
 
 interface Props {
   screen: Screen;
@@ -29,6 +29,7 @@ export function Sidebar({ screen, go, projectName }: Props) {
       <div className="brand"><Logo />JoineryApp</div>
       <div className="navlabel">Workspace</div>
       <Nav on={screen === 'projects'} onClick={() => go('projects')} icon={<IconProjects />}>Projects</Nav>
+      <Nav on={screen === 'build'} disabled={noProject} onClick={() => go('build')} icon={<IconBuild />}>Build</Nav>
       <Nav on={screen === 'drawing'} disabled={noProject} onClick={() => go('drawing')} icon={<IconDrawing />}>Drawings</Nav>
       <Nav on={screen === 'cutting'} disabled={noProject} onClick={() => go('cutting')} icon={<IconList />}>Cutting list</Nav>
       <Nav on={screen === 'estimate'} disabled={noProject} onClick={() => go('estimate')} icon={<IconCalc />}>Estimate &amp; quote</Nav>

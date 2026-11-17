@@ -5,7 +5,9 @@ import { buildGeometry } from './drawing';
 import { calculate } from './estimate';
 import { geometryToDxf, cuttingListCsv } from './exporters';
 import { nest } from './nesting';
-import type { Part } from '../types';
+import type { Part, RunConfig } from '../types';
+import { applyRun, DEFAULT_RUN, isApplied, resolveRun, runUnits } from './run';
+import { runDrawings } from './runDrawing';
 
 const S = DEFAULT_SETTINGS;
 const base = unitFromTemplate(TEMPLATES[0], []); // 600 × 720 × 560, 140 drawer, 1 shelf
@@ -139,6 +141,60 @@ describe('adding several units at once', () => {
   it('flags out-of-range sizes', () => {
     expect(rowErrors({ name: 'X', width: 600, height: 720, depth: 560, qty: 1 })).toEqual({});
     expect(Object.keys(rowErrors({ name: ' ', width: 50, height: 720, depth: 5000, qty: 0 })).sort()).toEqual(['depth', 'name', 'qty', 'width']);
+  });
+});
+
+describe('build from wall length', () => {
+  const cfg = (patch: Partial<RunConfig> = {}): RunConfig => ({ ...DEFAULT_RUN, ...patch });
+
+  it('splits the length into equal cabinets within the max width, exactly', () => {
+    const r = resolveRun(cfg({ length: 3000, maxWidth: 600 }));
+    expect(r.errors).toEqual([]);
+    expect(r.slots.map((s) => s.width)).toEqual([600, 600, 600, 600, 600]);
+    const odd = resolveRun(cfg({ length: 3203, maxWidth: 600 })); // 6 cabinets, 3 mm left over
+    expect(odd.slots.map((s) => s.width)).toEqual([534, 534, 534, 534, 534, 533]);
+    expect(odd.slots.reduce((a, s) => a + s.width, 0)).toBe(3203);
+    expect(odd.slots.map((s) => s.x)).toEqual([0, 534, 1068, 1602, 2136, 2670]);
+  });
+
+  it('keeps fixed widths and shares the rest', () => {
+    const r = resolveRun(cfg({ length: 3000, count: 5, slots: [{ width: 800, kind: 'doors' }, { width: null, kind: 'standard' }, { width: 450, kind: 'standard' }] }));
+    expect(r.errors).toEqual([]);
+    expect(r.slots.map((s) => s.width)).toEqual([800, 584, 450, 583, 583]);
+    expect(r.slots[0]).toMatchObject({ fixed: true, kind: 'doors' });
+  });
+
+  it('explains impossible settings', () => {
+    expect(resolveRun(cfg({ length: 1000, count: 2, slots: [{ width: 600, kind: 'standard' }, { width: 600, kind: 'standard' }] })).errors[0]).toMatch(/200 mm too long/);
+    expect(resolveRun(cfg({ length: 900, count: 8 })).errors[0]).toMatch(/Not enough length/);
+    expect(resolveRun(cfg({ length: 0 })).errors.length).toBeGreaterThan(0);
+  });
+
+  it('creates base and wall cabinets, replacing earlier Build cabinets but keeping manual ones', () => {
+    const manual = { ...unitFromTemplate(TEMPLATES[3], []) }; // T1, added by hand
+    const c = cfg({ length: 1800, maxWidth: 600 });
+    const slots = resolveRun(c).slots;
+    const first = applyRun([manual], c, slots);
+    expect(first.map((u) => u.code)).toEqual(['T1', 'B1', 'B2', 'B3', 'W1', 'W2', 'W3']);
+    expect(first.filter((u) => u.type === 'wall').every((u) => u.depth === 320 && u.height === 720)).toBe(true);
+    expect(isApplied(first, c, slots)).toBe(true);
+
+    const c2 = cfg({ length: 1200, maxWidth: 600, wall: false });
+    const second = applyRun(first, c2, resolveRun(c2).slots);
+    expect(second.map((u) => u.code)).toEqual(['T1', 'B1', 'B2']);
+    expect(isApplied(second, c, slots)).toBe(false);
+  });
+
+  it('draws plan, elevation and section with the run dimensions', () => {
+    const c = cfg({ length: 2400 });
+    const slots = resolveRun(c).slots;
+    const { base, wall } = runUnits(c, slots, []);
+    const v = runDrawings(c, slots, base, wall, S, 1);
+    const texts = (g: { labels: { text: string }[] }) => g.labels.map((l) => l.text);
+    expect(texts(v.elevation)).toEqual(expect.arrayContaining(['2400', '600', '100', '720', '38', '2170']));
+    expect(texts(v.plan)).toEqual(expect.arrayContaining(['2400', 'B1', 'B4', 'W1', '598', '320']));
+    expect(texts(v.section)).toEqual(expect.arrayContaining(['560', '598', '2170']));
+    for (const g of [v.plan, v.elevation, v.section]) expect(g.bounds.w).toBeGreaterThan(0);
   });
 });
 

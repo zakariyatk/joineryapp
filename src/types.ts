@@ -19,6 +19,35 @@ export interface Unit {
   shelves: number;
   doors: number; // 0 = automatic (1 door up to 700 wide, else 2)
   doorStyle: DoorStyle;
+  /** 'build' when created by the Build page; those are replaced when the run is re-created. */
+  source?: 'build';
+}
+
+/** Front layout of one cabinet in a run. */
+export type SlotKind = 'standard' | 'doors';
+
+export interface RunSlot {
+  /** Fixed width in mm, or null to share the remaining length equally. */
+  width: number | null;
+  kind: SlotKind;
+}
+
+/** A straight run of cabinets along one wall, generated from its total length. */
+export interface RunConfig {
+  length: number;
+  maxWidth: number;
+  /** Number of base cabinets, or null to work it out from length ÷ max width. */
+  count: number | null;
+  slots: RunSlot[];
+  baseHeight: number;
+  baseDepth: number;
+  plinth: number;
+  worktop: number; // thickness
+  overhang: number; // worktop past the doors
+  wall: boolean;
+  wallHeight: number;
+  wallDepth: number;
+  wallBottom: number; // underside of wall cabinets above the floor
 }
 
 /** Per-project override of an estimate line's quantity or rate. */
@@ -51,6 +80,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   units: Unit[];
+  run?: RunConfig;
   estimate: ProjectEstimate;
 }
 

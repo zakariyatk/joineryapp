@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hardwareCounts, unitParts } from './cabinet';
-import { DEFAULT_SETTINGS, newProject, TEMPLATES, unitFromTemplate } from './defaults';
+import { DEFAULT_SETTINGS, newProject, parseWidths, rowErrors, TEMPLATES, unitFromTemplate, unitsFromRows } from './defaults';
 import { buildGeometry } from './drawing';
 import { calculate } from './estimate';
 import { geometryToDxf, cuttingListCsv } from './exporters';
@@ -112,6 +112,33 @@ describe('calculate', () => {
     p.estimate.overrides['hw:hinge'] = { q: 10, r: 1 };
     const line = calculate(p, S).lines.find((l) => l.key === 'hw:hinge')!;
     expect(line).toMatchObject({ q: 10, r: 1, amount: 10, overridden: true, autoQ: 2 });
+  });
+});
+
+describe('adding several units at once', () => {
+  it('creates one unit per row with its own size and the next free codes', () => {
+    const existing = [unitFromTemplate(TEMPLATES[0], [])]; // B1
+    const rows = [
+      { name: 'Base cabinet', width: 300, height: 720, depth: 560, qty: 1 },
+      { name: 'Base cabinet', width: 450, height: 720, depth: 560, qty: 2 },
+      { name: 'Corner base', width: 900, height: 720, depth: 600, qty: 1 },
+    ];
+    const units = unitsFromRows(TEMPLATES[0], rows, existing);
+    expect(units.map((u) => u.code)).toEqual(['B2', 'B3', 'B4']);
+    expect(units.map((u) => [u.width, u.depth, u.qty])).toEqual([[300, 560, 1], [450, 560, 2], [900, 600, 1]]);
+    expect(units[2].name).toBe('Corner base');
+    expect(new Set(units.map((u) => u.id)).size).toBe(3);
+  });
+
+  it('parses width lists and rejects bad entries', () => {
+    expect(parseWidths('300, 450 600;900')).toEqual([300, 450, 600, 900]);
+    expect(parseWidths('300, abc')).toBeNull();
+    expect(parseWidths('')).toEqual([]);
+  });
+
+  it('flags out-of-range sizes', () => {
+    expect(rowErrors({ name: 'X', width: 600, height: 720, depth: 560, qty: 1 })).toEqual({});
+    expect(Object.keys(rowErrors({ name: ' ', width: 50, height: 720, depth: 5000, qty: 0 })).sort()).toEqual(['depth', 'name', 'qty', 'width']);
   });
 });
 

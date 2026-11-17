@@ -9,7 +9,8 @@ function Svg({ children, size = 18, sw = 1.8 }: { children: ReactNode; size?: nu
 }
 
 export const IconProjects = () => <Svg><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></Svg>;
-export const IconDrawing = () => <Svg><path d="M3 21V3l18 18z" /><path d="M7 17v-5l5 5z" /></Svg>;
+export const IconBuild = () => <Svg><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 12h18M12 3v18" /></Svg>;
+export const IconDrawing =() => <Svg><path d="M3 21V3l18 18z" /><path d="M7 17v-5l5 5z" /></Svg>;
 export const IconList = () => <Svg><path d="M8 6h13M8 12h13M8 18h13M3 6h1M3 12h1M3 18h1" /></Svg>;
 export const IconCalc = () => <Svg><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M8 7h8M8 12h2M14 12h2M8 16h2M14 16h2" /></Svg>;
 export const IconSettings = () => <Svg><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1" /></Svg>;

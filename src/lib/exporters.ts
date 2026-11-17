@@ -1,5 +1,5 @@
 import type { Part, Project, Settings, Unit } from '../types';
-import type { Geometry } from './drawing';
+import type { BoxKind, Geometry, SegKind } from './drawing';
 import type { ProjectCalc } from './estimate';
 import { escapeHtml as h, money, num } from './format';
 
@@ -25,7 +25,10 @@ export function geometryToDxf(g: Geometry): string {
   const f = (n: number) => n.toFixed(3);
   const line = (layer: string, x1: number, y1: number, x2: number, y2: number) =>
     out.push('0', 'LINE', '8', layer, '10', f(x1), '20', f(-y1), '30', '0', '11', f(x2), '21', f(-y2), '31', '0');
-  const layerOf: Record<string, string> = { carcass: 'CARCASS', front: 'FRONTS', inset: 'FRONTS', plinth: 'CARCASS', back: 'CARCASS' };
+  const layerOf: Record<BoxKind, string> = {
+    carcass: 'CARCASS', front: 'FRONTS', inset: 'FRONTS', plinth: 'CARCASS', back: 'CARCASS',
+    worktop: 'WORKTOP', wallmass: 'BUILDING', hidden: 'HIDDEN',
+  };
   for (const b of g.boxes) {
     const L = layerOf[b.kind];
     line(L, b.x, b.y, b.x + b.w, b.y);
@@ -33,10 +36,13 @@ export function geometryToDxf(g: Geometry): string {
     line(L, b.x + b.w, b.y + b.h, b.x, b.y + b.h);
     line(L, b.x, b.y + b.h, b.x, b.y);
   }
-  const segLayer: Record<string, string> = { outline: 'CARCASS', thin: 'CARCASS', dim: 'DIMENSIONS', ext: 'DIMENSIONS', hidden: 'HIDDEN', handle: 'FRONTS', swing: 'HIDDEN' };
+  const segLayer: Record<SegKind, string> = {
+    outline: 'CARCASS', thin: 'CARCASS', dim: 'DIMENSIONS', ext: 'DIMENSIONS', hidden: 'HIDDEN', handle: 'FRONTS', swing: 'HIDDEN', floor: 'BUILDING',
+  };
   for (const s of g.segs) line(segLayer[s.kind], s.x1, s.y1, s.x2, s.y2);
   for (const t of g.labels) {
-    out.push('0', 'TEXT', '8', 'DIMENSIONS', '10', f(t.x), '20', f(-t.y), '30', '0', '40', f(11 * g.k), '1', t.text,
+    const layer = t.tone === 'note' ? 'NOTES' : 'DIMENSIONS';
+    out.push('0', 'TEXT', '8', layer, '10', f(t.x), '20', f(-t.y), '30', '0', '40', f((t.size ?? 11) * g.k), '1', t.text,
       '50', t.vertical ? '90' : '0', '72', '1', '11', f(t.x), '21', f(-t.y), '31', '0');
   }
   out.push('0', 'ENDSEC', '0', 'EOF');
@@ -103,6 +109,19 @@ export function cuttingListHtml(project: Project, settings: Settings, calc: Proj
       <div style="text-align:right" class="muted">${calc.pieces} parts · edge banding ${num(calc.edgeMetres)} m<br>${summary}</div></div>
     <table><thead><tr><th>#</th><th>Unit</th><th>Part</th><th class="r">Qty</th><th class="r">Length</th><th class="r">Width</th><th class="r">Thk</th><th>Material</th><th>Edges</th></tr></thead><tbody>${rows}</tbody></table></div>
     ${layouts}`);
+}
+
+/** One landscape sheet: plan, elevation and section of a run plus its cabinet schedule. */
+export function buildSheetHtml(project: Project, views: { title: string; svg: string }[], rows: { code: string; name: string; size: string }[]): string {
+  const cells = views.map((v) => `<div class="cell"><div class="muted" style="font-size:9pt;margin-bottom:4px;font-weight:600">${h(v.title)}</div>${v.svg}</div>`).join('');
+  const table = `<div class="cell"><div class="muted" style="font-size:9pt;margin-bottom:4px;font-weight:600">CABINET SCHEDULE</div>
+    <table><thead><tr><th>Ref</th><th>Item</th><th>W × H × D (mm)</th></tr></thead><tbody>
+    ${rows.map((r) => `<tr><td>${h(r.code)}</td><td>${h(r.name)}</td><td>${h(r.size)}</td></tr>`).join('')}</tbody></table></div>`;
+  return doc(`Build – ${project.name}`, `
+    <style>.grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:88mm 88mm;gap:6mm}.cell{border:1px solid #DDD8CF;padding:3mm;overflow:hidden}.cell svg{height:78mm}</style>
+    <div class="head" style="margin-bottom:6px"><div><h1 style="font-size:15pt">${h(project.name)}</h1><div class="muted">${h(project.client || '')}</div></div>
+      <div class="muted" style="text-align:right">Plan · Elevation · Section<br>${new Date().toLocaleDateString('en-GB')} · dimensions in mm</div></div>
+    <div class="grid">${cells}${table}</div>`);
 }
 
 export function drawingSheetHtml(project: Project, unit: Unit, settings: Settings, svgs: { title: string; svg: string }[]): string {

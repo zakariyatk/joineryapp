@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Sidebar, type Screen } from './components/Sidebar';
 import { calculate } from './lib/estimate';
+import { Build } from './screens/Build';
 import { CuttingList } from './screens/CuttingList';
 import { DrawingEditor } from './screens/DrawingEditor';
 import { Estimate } from './screens/Estimate';
@@ -28,6 +29,7 @@ export function App() {
   let content;
   if (screen === 'settings') content = <SettingsScreen />;
   else if (!project || !calc || screen === 'projects') content = <Projects activeId={project?.id ?? null} open={open} openUnit={(pid, uid) => { open(pid); setUnitId(uid); }} />;
+  else if (screen === 'build') content = <Build project={project} go={go} />;
   else if (screen === 'drawing') content = <DrawingEditor project={project} unitId={unitId} setUnitId={setUnitId} go={go} />;
   else if (screen === 'cutting') content = <CuttingList project={project} calc={calc} go={go} />;
   else content = <Estimate project={project} calc={calc} go={go} />;

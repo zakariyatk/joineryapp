@@ -25,7 +25,12 @@ npm install
 npm run dev
 ```
 
-`npm run dev` starts Vite and opens the app in Electron with hot reload.
+`npm run dev` starts Vite and opens the app in Electron:
+
+- Changes in `src/` (screens, styles, logic) appear instantly through Vite hot reload.
+- Changes in `electron/` (main process, preload) restart the app automatically (`scripts/dev-electron.mjs`).
+- Closing the app window stops the dev session. `Ctrl+Shift+I` opens DevTools.
+- Dev and installed copies share `%APPDATA%\JoineryApp`, so back up `joinery-data.json` before experimenting with real projects.
 
 | Command | |
 | --- | --- |

@@ -22,11 +22,45 @@ export const WIDTH_MAX = 1200;
 const DRAWER_HEIGHT = 140;
 const FRONT_THICKNESS = 18;
 
-export const KIND_LABEL: Record<SlotKind, string> = { standard: 'Drawer + door', doors: 'Doors only' };
+export const KIND_LABEL: Record<SlotKind, string> = {
+  standard: 'Normal base unit (drawer + door)',
+  drawers: 'Drawer base unit',
+  pullout: 'Pull-out drawer base unit',
+  bin: 'Trash bin drawer base unit',
+  sink: 'Sink cabinet base unit',
+  door1: 'Single door base unit',
+  door2: 'Double door base unit',
+  doors: 'Doors only (count automatic)',
+};
+/** Short names for tables. */
+export const KIND_SHORT: Record<SlotKind, string> = {
+  standard: 'Normal', drawers: 'Drawers', pullout: 'Pull-out', bin: 'Bin pull-out', sink: 'Sink', door1: 'Single door', door2: 'Double door', doors: 'Doors',
+};
+/** The base unit kinds offered for new cabinets, in menu order. */
+export const BASE_KINDS: SlotKind[] = ['standard', 'drawers', 'pullout', 'bin', 'sink', 'door1', 'door2'];
+/** Usual width of each kind, used when a unit is placed with a single click. */
+export const KIND_WIDTH: Record<SlotKind, number> = { standard: 600, drawers: 600, pullout: 300, bin: 450, sink: 900, door1: 450, door2: 800, doors: 600 };
+export const DEFAULT_DRAWERS = 3;
+
+/** How each kind of base unit is built: its name, fronts and shelves. */
+export function baseSpec(kind: SlotKind, drawers = DEFAULT_DRAWERS): Pick<Unit, 'name' | 'drawerHeight' | 'shelves' | 'doors'> & { drawers?: number } {
+  switch (kind) {
+    case 'drawers': return { name: `${drawers}-drawer base unit`, drawerHeight: 0, shelves: 0, doors: 0, drawers };
+    // A pull-out is one full-height front on runners; a bin pull-out is the same box holding bins.
+    case 'pullout': return { name: 'Pull-out base unit', drawerHeight: 0, shelves: 0, doors: 0, drawers: 1 };
+    case 'bin': return { name: 'Bin pull-out base unit', drawerHeight: 0, shelves: 0, doors: 0, drawers: 1 };
+    case 'sink': return { name: 'Sink base unit', drawerHeight: 0, shelves: 0, doors: 2 };
+    case 'door1': return { name: 'Single door base unit', drawerHeight: 0, shelves: 1, doors: 1 };
+    case 'door2': return { name: 'Double door base unit', drawerHeight: 0, shelves: 1, doors: 2 };
+    case 'doors': return { name: 'Door base', drawerHeight: 0, shelves: 1, doors: 0 };
+    default: return { name: 'Base cabinet', drawerHeight: DRAWER_HEIGHT, shelves: 1, doors: 0 };
+  }
+}
 
 export interface ResolvedSlot {
   width: number;
   kind: SlotKind;
+  drawers: number; // drawers in a 'drawers' cabinet, else 0
   fixed: boolean;
   x: number; // left edge from the start of the run
 }
@@ -78,7 +112,7 @@ export function resolveRun(c: RunConfig): ResolvedRun {
       w = each + (extra > 0 ? 1 : 0);
       if (extra > 0) extra--;
     }
-    const r = { width: w, kind: s.kind, fixed: s.width !== null, x };
+    const r = { width: w, kind: s.kind, drawers: s.kind === 'drawers' ? s.drawers ?? DEFAULT_DRAWERS : 0, fixed: s.width !== null, x };
     x += w;
     return r;
   });
@@ -99,9 +133,8 @@ export function runUnits(c: RunConfig, slots: ResolvedSlot[], keep: Unit[]): { b
     return unit;
   };
   const base = slots.map((s) => make({
-    name: s.kind === 'doors' ? 'Door base' : 'Base cabinet',
-    type: 'base', qty: 1, width: s.width, height: c.baseHeight, depth: c.baseDepth, plinth: c.plinth,
-    drawerHeight: s.kind === 'standard' ? DRAWER_HEIGHT : 0, shelves: 1, doors: 0, doorStyle: 'shaker', source: 'build',
+    ...baseSpec(s.kind, s.drawers || DEFAULT_DRAWERS),
+    type: 'base', qty: 1, width: s.width, height: c.baseHeight, depth: c.baseDepth, plinth: c.plinth, doorStyle: 'shaker', source: 'build',
   }));
   const wall = c.wall
     ? slots.map((s) => make({
@@ -119,7 +152,7 @@ export function applyRun(units: Unit[], c: RunConfig, slots: ResolvedSlot[]): Un
   return [...keep, ...base, ...wall];
 }
 
-const sig = (u: Unit) => [u.type, u.width, u.height, u.depth, u.plinth, u.drawerHeight].join(':');
+const sig = (u: Unit) => [u.type, u.name, u.width, u.height, u.depth, u.plinth, u.drawerHeight, u.drawers ?? 0, u.doors, u.shelves].join(':');
 
 /** True when the project already holds exactly the cabinets this run would create. */
 export function isApplied(units: Unit[], c: RunConfig, slots: ResolvedSlot[]): boolean {

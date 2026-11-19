@@ -81,6 +81,9 @@ export function newProject(name: string, client: string): Project {
     createdAt: now,
     updatedAt: now,
     units: [],
+    // Build starts as a blank drawing: walls first, then cabinets.
+    buildMode: 'draw',
+    layout: { length: 3000, worktop: 38, overhang: 20, cabinets: [], room: { chains: [], thickness: 150, height: 2700 } },
     estimate: { overhead: 10, margin: 25, tax: 18, overrides: {}, extras: [] },
   };
 }

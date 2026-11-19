@@ -7,7 +7,7 @@ import { NumberField } from '../components/NumberField';
 import type { Screen } from '../components/Sidebar';
 import { useExport } from '../components/Toast';
 import { UnitDrawing } from '../components/UnitDrawing';
-import { doorCount, normalise, unitParts } from '../lib/cabinet';
+import { doorCount, drawerCount, normalise, unitParts } from '../lib/cabinet';
 import { nextCode, uid } from '../lib/defaults';
 import { buildGeometry, type View } from '../lib/drawing';
 import { drawingSheetHtml, geometryToDxf } from '../lib/exporters';
@@ -147,6 +147,13 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
             </div>
             <p className="sec">Fronts &amp; interior</p>
             <div className="fields">
+              <div className="span2"><label className="lbl" htmlFor="u-dr">Front layout</label>
+                <select id="u-dr" className="inp" value={drawerCount(unit)} onChange={(e) => set({ drawers: Number(e.target.value) })}>
+                  <option value={0}>Doors (with optional top drawer)</option>
+                  {[2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>Drawer unit – {n} drawers</option>)}
+                </select>
+              </div>
+              {drawerCount(unit) === 0 && <>
               <div><label className="lbl" htmlFor="u-dh">Top drawer height</label><NumberField id="u-dh" step={10} min={0} value={unit.drawerHeight} onChange={(v) => set({ drawerHeight: v })} /></div>
               <div><label className="lbl" htmlFor="u-sh">Shelves</label><NumberField id="u-sh" min={0} value={unit.shelves} onChange={(v) => set({ shelves: Math.round(v) })} /></div>
               <div><label className="lbl" htmlFor="u-doors">Doors</label>
@@ -156,6 +163,7 @@ export function DrawingEditor({ project, unitId, setUnitId, go }: Props) {
                   <option value={1}>1</option><option value={2}>2</option><option value={3}>3</option><option value={4}>4</option>
                 </select>
               </div>
+              </>}
               <div><label className="lbl" htmlFor="u-style">Door style</label>
                 <select id="u-style" className="inp" value={unit.doorStyle} onChange={(e) => set({ doorStyle: e.target.value as Unit['doorStyle'] })}>
                   <option value="shaker">Shaker</option><option value="slab">Slab</option>

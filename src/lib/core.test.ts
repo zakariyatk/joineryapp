@@ -6,7 +6,7 @@ import { calculate } from './estimate';
 import { geometryToDxf, cuttingListCsv } from './exporters';
 import { nest } from './nesting';
 import type { Part, RunConfig } from '../types';
-import { applyRun, DEFAULT_RUN, isApplied, resolveRun, runUnits } from './run';
+import { applyRun, baseSpec, DEFAULT_RUN, isApplied, resolveRun, runUnits } from './run';
 import { runDrawings } from './runDrawing';
 
 const S = DEFAULT_SETTINGS;
@@ -210,5 +210,44 @@ describe('exports', () => {
   it('quotes CSV cells that contain commas', () => {
     const csv = cuttingListCsv(unitParts({ ...base, code: 'B1, left' }, S), S);
     expect(csv).toContain('"B1, left"');
+  });
+});
+
+describe('drawer units', () => {
+  const unit = { ...base, drawers: 3, drawerHeight: 140, shelves: 1 };
+
+  it('has only drawer fronts filling the height, with runners and handles per drawer', () => {
+    const parts = unitParts(unit, S);
+    const fronts = parts.filter((p) => p.role === 'front');
+    expect(fronts).toHaveLength(1);
+    expect(fronts[0]).toMatchObject({ name: 'Drawer front', qty: 3, length: 596, width: 236 });
+    expect(parts.some((p) => p.name === 'Shelf' || p.name === 'Door')).toBe(false);
+    expect(hardwareCounts([unit])).toMatchObject({ hinges: 0, runners: 3, handles: 3, drawers: 3 });
+  });
+
+  it('comes out of a Build run as a drawer unit', () => {
+    const c: RunConfig = { ...DEFAULT_RUN, length: 1200, count: 2, slots: [{ width: 600, kind: 'drawers', drawers: 4 }, { width: null, kind: 'doors' }], wall: false };
+    const { base: units } = runUnits(c, resolveRun(c).slots, []);
+    expect(units[0]).toMatchObject({ name: '4-drawer base unit', drawers: 4, drawerHeight: 0 });
+    expect(units[1].drawers).toBeUndefined();
+    expect(buildGeometry(units[0], 'front', S).boxes.filter((b) => b.kind === 'front')).toHaveLength(4);
+  });
+});
+
+describe('base unit types', () => {
+  const make = (kind: Parameters<typeof baseSpec>[0]) => ({ ...base, ...baseSpec(kind), drawers: baseSpec(kind).drawers ?? 0 });
+
+  it('builds each kind with the right fronts and hardware', () => {
+    const fronts = (k: Parameters<typeof baseSpec>[0]) => unitParts(make(k), S).filter((p) => p.role === 'front').map((p) => `${p.qty} ${p.name}`);
+    expect(fronts('standard')).toEqual(['1 Drawer front', '1 Door']);
+    expect(fronts('drawers')).toEqual(['3 Drawer front']);
+    expect(fronts('pullout')).toEqual(['1 Drawer front']);
+    expect(fronts('bin')).toEqual(['1 Drawer front']);
+    expect(fronts('sink')).toEqual(['2 Door']);
+    expect(fronts('door1')).toEqual(['1 Door']);
+    expect(fronts('door2')).toEqual(['2 Door']);
+    expect(hardwareCounts([make('pullout')])).toMatchObject({ hinges: 0, runners: 1, handles: 1 });
+    expect(hardwareCounts([make('sink')])).toMatchObject({ hinges: 4, runners: 0, pins: 0 });
+    expect(make('bin').name).toBe('Bin pull-out base unit');
   });
 });

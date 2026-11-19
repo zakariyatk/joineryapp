@@ -3,10 +3,16 @@ import type { Part, Settings, Unit } from '../types';
 export const RAIL_WIDTH = 100;
 export const DOOR_GAP = 2; // reveal on each side of a front
 export const MAX_DOOR_WIDTH = 700;
+export const MAX_DRAWERS = 6;
+
+/** Drawers in a drawer unit, 0 when the unit is not one. */
+export function drawerCount(u: Unit): number {
+  return Math.min(MAX_DRAWERS, Math.max(0, Math.round(u.drawers || 0)));
+}
 
 /** Number of doors: an explicit count, -1 for an open unit, 0 for automatic. */
 export function doorCount(u: Unit): number {
-  if (u.doors < 0) return 0;
+  if (drawerCount(u) > 0 || u.doors < 0) return 0;
   if (u.doors > 0) return u.doors;
   return u.width > MAX_DOOR_WIDTH ? 2 : 1;
 }
@@ -23,8 +29,10 @@ export function normalise(u: Unit): Unit {
     depth,
     qty: Math.max(1, Math.round(u.qty || 1)),
     plinth: Math.max(0, u.plinth || 0),
-    drawerHeight: Math.min(Math.max(0, u.drawerHeight || 0), height - 100),
-    shelves: Math.max(0, Math.round(u.shelves || 0)),
+    drawers: drawerCount(u),
+    // A drawer unit has no top drawer or shelves; its fronts fill the height.
+    drawerHeight: drawerCount(u) > 0 ? 0 : Math.min(Math.max(0, u.drawerHeight || 0), height - 100),
+    shelves: drawerCount(u) > 0 ? 0 : Math.max(0, Math.round(u.shelves || 0)),
   };
 }
 
@@ -41,7 +49,10 @@ export function fronts(raw: Unit) {
   const doorW = n > 0 ? Math.round((u.width - DOOR_GAP * 2 - (n - 1) * DOOR_GAP * 2) / n) : 0;
   const doorH = u.height - u.drawerHeight - DOOR_GAP * 2;
   const drawer = u.drawerHeight > 0 ? { w: u.width - DOOR_GAP * 2, h: u.drawerHeight - DOOR_GAP * 2 } : null;
-  return { doors: n, doorW, doorH, drawer, hinges: n * hingesPerDoor(doorH) };
+  // Drawer unit: equal fronts top to bottom, each with a gap all round.
+  const dn = drawerCount(u);
+  const pack = dn > 0 ? { n: dn, w: u.width - DOOR_GAP * 2, h: Math.floor(u.height / dn) - DOOR_GAP * 2, pitch: u.height / dn } : null;
+  return { doors: n, doorW, doorH, drawer, pack, hinges: n * hingesPerDoor(doorH) };
 }
 
 /**
@@ -75,6 +86,7 @@ export function unitParts(raw: Unit, settings: Settings): Part[] {
 
   const f = fronts(u);
   if (f.drawer) parts.push({ name: 'Drawer front', qty: 1, length: f.drawer.w, width: f.drawer.h, thickness: F, role: 'front', edges: all });
+  if (f.pack) parts.push({ name: 'Drawer front', qty: f.pack.n, length: f.pack.w, width: f.pack.h, thickness: F, role: 'front', edges: all });
   if (f.doors > 0) parts.push({ name: 'Door', qty: f.doors, length: f.doorH, width: f.doorW, thickness: F, role: 'front', edges: all });
 
   return parts.map((p, i) => ({
@@ -108,8 +120,10 @@ export function hardwareCounts(units: Unit[]) {
     const f = fronts(u);
     const q = u.qty;
     hinges += f.hinges * q;
-    if (f.drawer) { runners += q; drawers += q; }
-    handles += (f.doors + (f.drawer ? 1 : 0)) * q;
+    const nd = (f.drawer ? 1 : 0) + (f.pack?.n ?? 0);
+    runners += nd * q;
+    drawers += nd * q;
+    handles += (f.doors + nd) * q;
     if (u.plinth > 0) legs += (u.width > 1000 ? 6 : 4) * q;
     pins += u.shelves * 4 * q;
     fittings += q;

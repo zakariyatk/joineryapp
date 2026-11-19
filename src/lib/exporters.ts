@@ -27,7 +27,7 @@ export function geometryToDxf(g: Geometry): string {
     out.push('0', 'LINE', '8', layer, '10', f(x1), '20', f(-y1), '30', '0', '11', f(x2), '21', f(-y2), '31', '0');
   const layerOf: Record<BoxKind, string> = {
     carcass: 'CARCASS', front: 'FRONTS', inset: 'FRONTS', plinth: 'CARCASS', back: 'CARCASS',
-    worktop: 'WORKTOP', wallmass: 'BUILDING', hidden: 'HIDDEN',
+    worktop: 'WORKTOP', wallmass: 'BUILDING', hidden: 'HIDDEN', poche: 'BUILDING',
   };
   for (const b of g.boxes) {
     const L = layerOf[b.kind];
@@ -36,6 +36,10 @@ export function geometryToDxf(g: Geometry): string {
     line(L, b.x + b.w, b.y + b.h, b.x, b.y + b.h);
     line(L, b.x, b.y + b.h, b.x, b.y);
   }
+  for (const p of g.polys ?? []) {
+    if (p.kind === 'poche') continue; // fill only; its outline is drawn as lines
+    p.pts.forEach((a, i) => { const b = p.pts[(i + 1) % p.pts.length]; line(layerOf[p.kind], a.x, a.y, b.x, b.y); });
+  }
   const segLayer: Record<SegKind, string> = {
     outline: 'CARCASS', thin: 'CARCASS', dim: 'DIMENSIONS', ext: 'DIMENSIONS', hidden: 'HIDDEN', handle: 'FRONTS', swing: 'HIDDEN', floor: 'BUILDING',
   };
@@ -43,7 +47,8 @@ export function geometryToDxf(g: Geometry): string {
   for (const t of g.labels) {
     const layer = t.tone === 'note' ? 'NOTES' : 'DIMENSIONS';
     out.push('0', 'TEXT', '8', layer, '10', f(t.x), '20', f(-t.y), '30', '0', '40', f((t.size ?? 11) * g.k), '1', t.text,
-      '50', t.vertical ? '90' : '0', '72', '1', '11', f(t.x), '21', f(-t.y), '31', '0');
+      '50', t.angle !== undefined ? f(-t.angle) : t.vertical ? '90' : '0', '72', '1', '11', f(t.x), '21', f(-t.y), '31', '0',
+      ...(t.middle ? ['73', '2'] : []));
   }
   out.push('0', 'ENDSEC', '0', 'EOF');
   return out.join('\r\n') + '\r\n';
@@ -135,4 +140,20 @@ export function drawingSheetHtml(project: Project, unit: Unit, settings: Setting
       <div><span class="muted">Carcass</span><br><b>${h(settings.materials.carcass.name)}</b></div>
       <div><span class="muted">Date · units</span><br><b>${new Date().toLocaleDateString('en-GB')} · mm</b></div>
     </div>`);
+}
+
+/** One row of the 3D view's cabinet schedule. */
+export interface ScheduleRow { code: string; name: string; wall: string; size: string; from: string; gap: string }
+
+/** Landscape sheet for the workshop: the 3D picture with its labels, then the cabinet schedule. */
+export function view3dSheetHtml(project: Project, image: string, rows: ScheduleRow[]): string {
+  const safeImage = /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(image) ? image : '';
+  return doc(`3D view – ${project.name}`, `
+    <div class="head" style="margin-bottom:6px"><div><h1 style="font-size:15pt">${h(project.name)}</h1><div class="muted">${h(project.client || '')}</div></div>
+      <div class="muted" style="text-align:right">3D view · cabinet schedule<br>${new Date().toLocaleDateString('en-GB')} · sizes in mm (width × height × depth)</div></div>
+    <div class="page">${safeImage ? `<img src="${safeImage}" style="display:block;width:100%;max-height:150mm;object-fit:contain;border:1px solid #DDD8CF">` : ''}</div>
+    <h2>Cabinet schedule</h2>
+    <table><thead><tr><th>Ref</th><th>Cabinet</th><th>Wall</th><th class="r">W × H × D</th><th class="r">From floor</th><th class="r">Gap from wall</th></tr></thead><tbody>
+    ${rows.map((r) => `<tr><td><b>${h(r.code)}</b></td><td>${h(r.name)}</td><td>${h(r.wall)}</td><td class="r"><b>${h(r.size)}</b></td><td class="r">${h(r.from)}</td><td class="r">${h(r.gap)}</td></tr>`).join('')}
+    </tbody></table>`);
 }

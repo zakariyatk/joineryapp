@@ -204,3 +204,33 @@ dialog.wide { width: min(820px, calc(100vw - 32px)); max-height: calc(100vh - 48
 /* Toast */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--side); color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; display: flex; gap: 12px; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 10; }
 .toast button { border: 0; background: transparent; color: #FCD9B6; font-weight: 600; cursor: pointer; }
+.draw-plan { cursor: crosshair; touch-action: none; user-select: none; }
+.draw-plan:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.zoom-wrap { position: relative; width: 100%; height: 100%; display: flex; }
+.zoom-wrap > svg { flex: 1; width: 100%; height: 100%; }
+.zoom-view { cursor: grab; touch-action: none; user-select: none; }
+.zoom-view:active { cursor: grabbing; }
+.fit-btn { position: absolute; top: 6px; right: 6px; min-height: 28px; padding: 0 10px; font-size: 12px; }
+.draw-plan.tool-select { cursor: default; }
+.dim-edit { cursor: text; pointer-events: all; }
+.dim-edit:hover { fill: var(--accent); text-decoration: underline; }
+.dim-input { position: absolute; transform: translate(-50%, -50%); width: 84px; height: 28px; padding: 0 6px; text-align: center; font: 600 13px "Segoe UI", sans-serif;
+  border: 2px solid var(--accent); border-radius: 4px; background: #fff; color: #1C1B19; box-shadow: 0 2px 8px rgba(0,0,0,.18); z-index: 5; }
+/* Build › 3D view */
+.view3d-page { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; padding: 12px; min-height: calc(100vh - 72px); }
+.view3d-main { display: flex; flex-direction: column; min-height: 520px; overflow: hidden; }
+.view3d-canvas { position: relative; flex: 1; min-height: 0; }
+.view3d-side { display: flex; flex-direction: column; overflow: auto; max-height: calc(100vh - 96px); }
+.scene3d { position: absolute; inset: 0; overflow: hidden; }
+.scene3d canvas { display: block; touch-action: none; }
+.labels3d { position: absolute; inset: 0; pointer-events: none; }
+.tag3d { font: 600 12px/1.25 "Segoe UI", sans-serif; color: #1C1B19; background: rgba(255,255,255,.93); border: 1px solid #8A857C; border-radius: 4px;
+  padding: 3px 6px; text-align: center; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.tag3d .code { font-size: 14px; font-weight: 800; color: var(--accent); }
+.tag3d.on { border: 2px solid var(--accent); background: #FFF7EA; }
+.tag-dim { color: #1D4ED8; border-color: #9DB3EE; font-size: 13px; padding: 1px 5px; }
+.tag-level { color: #5F5B54; font-weight: 600; font-size: 11px; }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 10px 0 0; font-size: 14px; }
+.facts dt { color: var(--muted-2); }
+.facts dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 1100px) { .view3d-page { grid-template-columns: 1fr; } .view3d-side { max-height: none; } }
